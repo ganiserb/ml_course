@@ -3,6 +3,7 @@ import sys
 
 from collections import Counter
 from decimal import Decimal
+from operator import mul
 
 
 def build_prediction(train, test):
@@ -28,7 +29,13 @@ def build_prediction(train, test):
 
         data[category_name] += title.split()
 
-    global_count = Counter(sum(data.values(), []))
+    all_words = sum(data.values(), [])
+    global_count = Counter(all_words)  # Count all the words
+    global_word_prob = dict()
+    total_word_count = len(all_words)
+    for word, count in global_count.iteritems():
+        global_word_prob[word] = Decimal(count) / Decimal(total_word_count)
+
     category_count = dict()  # key is a category, value a Counter dict
     category_word_prob = dict()
 
@@ -50,15 +57,23 @@ def build_prediction(train, test):
     for thing in test:
         title_words = thing['title'].split()
 
-        for word in title_words:
-            for category_name in data.keys():
+        categories_probabilities = dict()
+        for category_name in data.keys():
+            words_probabilities = []
+            for word in title_words:
                 # Calculate the probability of this category being the
                 # correct one given this word in the title
                 # P(c|w) = (P(w|c) * P(c)) / P(w)
-                word_prob = Decimal(1) / Decimal(len(data[category_name]))
-                prob = (category_word_prob[category_name][word] * category_prob) / word_prob
-                # TODO
+                word_prob = global_word_prob.get(word, 1)  # If we have the stat, use it
+                cat_word_prob = category_word_prob[category_name].get(word, 1)
+                prob = (cat_word_prob * category_prob) / word_prob
 
+                words_probabilities.append(prob)
+            categories_probabilities[category_name] = reduce(mul, words_probabilities, 1)
+
+        result.append(
+            max(categories_probabilities, key=categories_probabilities.get)
+        )
 
     #     coincidences = dict()
     #     words = thing['title'].split()
