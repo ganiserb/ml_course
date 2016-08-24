@@ -17,11 +17,13 @@ if __name__ == "__main__":
     vectorizer = CountVectorizer()
 
     X = vectorizer.fit_transform([item['title'] for item in train])
-    y = [item['top_level_category'] for item in train]
+    y = np.array([item['top_level_category'] for item in train])
 
     c = DecisionTreeClassifier()
 
-    kfold = cross_validation.KFold(len(X), n_folds=3, shuffle=True)
+    row_count, _ = X.shape
+
+    kfold = cross_validation.KFold(row_count, n_folds=3, shuffle=True)
     a = [c.fit(X[train], y[train]).score(X[test], y[test])
          for train, test in kfold]
 
